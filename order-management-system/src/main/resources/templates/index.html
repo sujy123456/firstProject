@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单管理系统</title>
+    <style>
+        /* 基础样式，适配PC和手机端 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", sans-serif; padding: 20px; }
+        .menu { margin: 20px 0; display: flex; flex-wrap: wrap; gap: 10px; }
+        .menu a { text-decoration: none; background: #007bff; color: white; padding: 10px 20px; border-radius: 5px; }
+        .menu a:hover { background: #0056b3; }
+        @media (max-width: 768px) {
+            .menu { flex-direction: column; }
+            .menu a { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+<h1>订单管理系统</h1>
+<div class="menu">
+    <a href="/customer/apply">客户入网申请</a>
+    <a href="/customer/list">客户查询/审批</a>
+    <a href="/contract/input">合同录入</a>
+    <a href="/contract/list">合同审批</a>
+    <a href="/invoice/input">开票管理</a>
+    <a href="/invoice/uninvoiced">欠票查询</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合同列表/审批</title>
+    <style>
+        /* 样式保持不变 */
+        body {
+            padding: 20px;
+            font-family: "Microsoft YaHei", sans-serif;
+            margin: 0;
+        }
+        .search-bar {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .search-bar input, .search-bar select {
+            padding: 6px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .search-bar button {
+            padding: 6px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .search-bar button:hover {
+            background: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        .action a {
+            margin-right: 8px;
+            text-decoration: none;
+            color: #007bff;
+        }
+        .action a:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        @media (max-width: 768px) {
+            .search-bar {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .search-bar input, .search-bar select, .search-bar button {
+                width: 100%;
+                margin-right: 0;
+            }
+            table {
+                font-size: 12px;
+            }
+            th, td {
+                padding: 5px;
+            }
+            .hide-mobile {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<h2>合同列表/审批</h2>
+
+<!-- 合同查询栏 -->
+<div class="search-bar">
+    <form th:action="@{/contract/list}" method="get">
+        合同编号/名称：<input type="text" name="keyword" th:value="${keyword}" placeholder="输入合同编号或名称..." />
+        合同类型：<select name="contractType" th:value="${contractType}">
+        <option value="">全部类型</option>
+        <option value="产品销售合同">产品销售合同</option>
+        <option value="服务合同">服务合同</option>
+    </select>
+        审批状态：<select name="status" th:value="${status}">
+        <option value="">全部状态</option>
+        <option value="草稿">草稿</option>
+        <option value="已提交">已提交</option>
+        <option value="已审批">已审批</option>
+        <option value="已驳回">已驳回</option>
+    </select>
+        <button type="submit">查询</button>
+        <a th:href="@{/contract/input}" style="text-decoration: none;">
+            <button type="button" style="background: #28a745;">新增合同</button>
+        </a>
+    </form>
+</div>
+
+<!-- 合同列表 -->
+<table>
+    <thead>
+    <tr>
+        <th>合同编号</th>
+        <th>合同名称</th>
+        <th>客户名称</th>
+        <th>合同类型</th>
+        <th class="hide-mobile">签订日期</th>
+        <th class="hide-mobile">交货日期</th>
+        <th>合同金额</th>
+        <th class="hide-mobile">已开票金额</th>
+        <th>审批状态</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- 遍历列表（兜底空列表） -->
+    <tr th:each="contract : ${contracts != null ? contracts : #lists.emptyList()}">
+        <!-- 基础字段（判空） -->
+        <td th:text="${contract != null ? contract.contractNo : '-'}">-</td>
+        <td th:text="${contract != null ? contract.contractName : '-'}">-</td>
+        <td th:text="${contract != null ? contract.customerName : '-'}">-</td>
+        <td th:text="${contract != null ? contract.contractType : '-'}">-</td>
+
+        <!-- 核心修复：LocalDate日期格式化使用#temporals -->
+        <td class="hide-mobile">
+                    <span th:if="${contract != null and contract.signDate != null}"
+                          th:text="${#temporals.format(contract.signDate, 'yyyy-MM-dd')}">-</span>
+            <span th:unless="${contract != null and contract.signDate != null}">-</span>
+        </td>
+        <td class="hide-mobile">
+                    <span th:if="${contract != null and contract.deliveryDate != null}"
+                          th:text="${#temporals.format(contract.deliveryDate, 'yyyy-MM-dd')}">-</span>
+            <span th:unless="${contract != null and contract.deliveryDate != null}">-</span>
+        </td>
+
+        <!-- 金额字段（判空） -->
+        <td th:text="${contract != null ? contract.amount : '0.00'}">0.00</td>
+        <td class="hide-mobile" th:text="${contract != null ? contract.invoicedAmount : '0.00'}">0.00</td>
+
+        <!-- 状态字段（判空） -->
+        <td th:text="${contract != null ? contract.status : '草稿'}">草稿</td>
+
+        <!-- 操作按钮（严格判空） -->
+        <td class="action">
+            <a th:if="${contract != null and contract.id != null}"
+               th:href="|@{/contract/input(id=${contract.id})}|">修改</a>
+
+            <a th:if="${contract != null and contract.id != null and contract.status == '草稿'}"
+               th:href="|@{/contract/delete/{id}(id=${contract.id})}|"
+               onclick="return confirm('确定删除该合同吗？删除后不可恢复！')">删除</a>
+
+            <a th:if="${contract != null and contract.id != null and contract.status == '草稿'}"
+               th:href="|@{/contract/submit/{id}(id=${contract.id})}|"
+               onclick="return confirm('确定提交该合同进行审批吗？')">提交</a>
+
+            <a th:if="${contract != null and contract.id != null and contract.status == '已提交'}"
+               th:href="|@{/contract/cancel/{id}(id=${contract.id})}|"
+               onclick="return confirm('确定撤销该合同的提交吗？')">撤销</a>
+
+            <a th:if="${contract != null and contract.id != null and contract.status == '已提交'}"
+               th:href="|@{/contract/approve/{id}(id=${contract.id})}|">审批</a>
+
+            <a th:if="${contract != null and contract.id != null and contract.status == '已审批'}"
+               th:href="|@{/invoice/input(contractNo=${contract.contractNo})}|">开票</a>
+        </td>
+    </tr>
+
+    <!-- 无数据提示 -->
+    <tr th:if="${#lists.isEmpty(contracts)}">
+        <td colspan="10" style="text-align: center; color: #999;">暂无合同数据</td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>

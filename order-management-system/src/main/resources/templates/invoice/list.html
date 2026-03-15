@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>开票记录列表</title>
+    <style>
+        /* 保持原有样式，确保页面美观 */
+        body {
+            padding: 20px;
+            font-family: "Microsoft YaHei", sans-serif;
+            margin: 0;
+        }
+        .search-bar {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .search-bar input {
+            padding: 6px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .search-bar button {
+            padding: 6px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .search-bar button:hover {
+            background: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        .action a {
+            margin-right: 8px;
+            text-decoration: none;
+            color: #007bff;
+        }
+        .action a:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        @media (max-width: 768px) {
+            .search-bar {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .search-bar input, .search-bar button {
+                width: 100%;
+                margin-right: 0;
+            }
+            table {
+                font-size: 12px;
+            }
+            th, td {
+                padding: 5px;
+            }
+            .hide-mobile {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<h2>开票记录列表</h2>
+
+<!-- 仅保留合同编号查询（适配你的实体） -->
+<div class="search-bar">
+    <form th:action="@{/invoice/list}" method="get">
+        合同编号：<input type="text" name="contractNo" th:value="${contractNo}" placeholder="输入合同编号..." />
+        <button type="submit">查询</button>
+        <a th:href="@{/invoice/input}" style="text-decoration: none;">
+            <button type="button" style="background: #28a745;">新增开票</button>
+        </a>
+    </form>
+</div>
+
+<!-- 开票记录列表（仅显示实体中存在的字段） -->
+<table>
+    <thead>
+    <tr>
+        <th>开票编号</th>
+        <th>合同编号</th>
+        <th>开票金额</th>
+        <th class="hide-mobile">开票日期</th>
+        <th class="hide-mobile">备注</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- 遍历开票记录（兜底空列表） -->
+    <tr th:each="invoice : ${invoices != null ? invoices : #lists.emptyList()}">
+        <!-- 仅使用实体中存在的字段 -->
+        <td th:text="${invoice != null ? invoice.id : '-'}">-</td>
+        <td th:text="${invoice != null ? invoice.contractNo : '-'}">-</td>
+        <td th:text="${invoice != null ? invoice.invoiceAmount : '0.00'}">0.00</td>
+
+        <!-- 开票日期（适配Date类型，用#dates格式化） -->
+        <td class="hide-mobile">
+                    <span th:if="${invoice != null and invoice.invoiceDate != null}"
+                          th:text="${#dates.format(invoice.invoiceDate, 'yyyy-MM-dd HH:mm')}">-</span>
+            <span th:unless="${invoice != null and invoice.invoiceDate != null}">-</span>
+        </td>
+
+        <td class="hide-mobile" th:text="${invoice != null ? invoice.remark : '-'}">-</td>
+
+        <!-- 简化操作按钮（仅保留编辑/删除） -->
+        <td class="action">
+            <a th:if="${invoice != null and invoice.id != null}"
+               th:href="|@{/invoice/input(id=${invoice.id})}|">编辑</a>
+            <a th:if="${invoice != null and invoice.id != null}"
+               th:href="|@{/invoice/delete/{id}(id=${invoice.id})}|"
+               onclick="return confirm('确定删除该开票记录吗？删除后不可恢复！')">删除</a>
+        </td>
+    </tr>
+
+    <!-- 无数据提示 -->
+    <tr th:if="${#lists.isEmpty(invoices)}">
+        <td colspan="6" style="text-align: center; color: #999;">暂无开票记录</td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>

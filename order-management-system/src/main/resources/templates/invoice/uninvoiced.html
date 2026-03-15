@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>未开票合同查询</title>
+    <style>
+        body { padding: 20px; font-family: "Microsoft YaHei"; }
+        .search-bar { margin-bottom: 20px; padding: 15px; background: #f8f9fa; }
+        .search-bar input { padding: 6px; margin-right: 10px; width: 200px; }
+        .search-bar button { padding: 6px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f8f9fa; }
+        .amount { color: red; font-weight: bold; }
+        .empty { text-align: center; color: #999; padding: 20px; }
+        .log { margin-top: 20px; padding: 10px; background: #f0f0f0; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+<h2>未开票合同查询</h2>
+
+<!-- 查询条件 -->
+<div class="search-bar">
+    <form th:action="@{/invoice/uninvoiced}" method="get">
+        合同编号：<input type="text" name="contractNo" th:value="${contractNo}" placeholder="输入合同编号..." />
+        客户名称：<input type="text" name="customerName" th:value="${customerName}" placeholder="输入客户名称..." />
+        <button type="submit">查询</button>
+        <a th:href="@{/invoice/uninvoiced}"><button type="button" style="background: #6c757d;">重置</button></a>
+    </form>
+</div>
+
+<!-- 未开票合同列表 -->
+<table>
+    <thead>
+    <tr>
+        <th>合同编号</th>
+        <th>客户名称</th>
+        <th>合同总金额</th>
+        <th>已开票金额</th>
+        <th>剩余可开票金额</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- 1. 先显示所有查询到的合同，不做过滤（排查数据） -->
+    <tr th:each="contract : ${uninvoicedList}">
+        <!-- 核心：核对实体类字段名，确保一致！ -->
+        <!-- 比如实体类是contractNo，模板中就不能写contract_no -->
+        <td th:text="${contract.contractNo != null ? contract.contractNo : '无'}">无</td>
+        <td th:text="${contract.customerName != null ? contract.customerName : '无'}">无</td>
+        <td th:text="${contract.amount != null ? contract.amount : '0.00'}">0.00</td>
+        <td th:text="${contract.invoicedAmount != null ? contract.invoicedAmount : '0.00'}">0.00</td>
+        <!-- 剩余金额：用Controller中存储的独立值，避免覆盖 -->
+        <td class="amount" th:text="${#vars['remain_' + contract.id] != null ? #vars['remain_' + contract.id] : '0.00'}">0.00</td>
+        <td>
+            <a th:href="@{/invoice/input(contractNo=${contract.contractNo})}">
+                <button type="button" style="padding: 4px 8px; font-size: 12px;">去开票</button>
+            </a>
+        </td>
+    </tr>
+    <!-- 无数据提示 -->
+    <tr th:if="${#lists.isEmpty(uninvoicedList)}">
+        <td colspan="6" class="empty">暂无合同数据（或所有合同已开完票）</td>
+    </tr>
+    </tbody>
+</table>
+
+<!-- 调试信息：显示查询到的合同数量 -->
+<div class="log" th:text="'查询到的合同总数：' + ${#lists.size(uninvoicedList)}">查询到的合同总数：0</div>
+</body>
+</html>

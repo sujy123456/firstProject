@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>客户入网申请</title>
+  <style>
+    body { padding: 20px; font-family: "Microsoft YaHei"; }
+    .form-group { margin: 15px 0; }
+    label { display: inline-block; width: 120px; }
+    input, select, textarea { width: 300px; padding: 5px; }
+    button { padding: 8px 15px; margin-right: 10px; }
+    @media (max-width: 768px) {
+      label { width: 100%; margin-bottom: 5px; }
+      input, select, textarea { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<h2>客户入网申请</h2>
+<form th:object="${customer}" th:action="@{/customer/save}" method="post">
+  <input type="hidden" th:field="*{id}" />
+  <input type="hidden" th:field="*{status}" />
+
+  <div class="form-group">
+    <label>客户名称：</label>
+    <input type="text" th:field="*{name}" required />
+  </div>
+  <div class="form-group">
+    <label>客户简称：</label>
+    <input type="text" th:field="*{shortName}" required />
+  </div>
+  <div class="form-group">
+    <label>行业：</label>
+    <select th:field="*{industry}">
+      <option value="">请选择</option>
+      <option value="制造业">制造业</option>
+      <option value="服务业">服务业</option>
+      <option value="金融业">金融业</option>
+      <option value="零售业">零售业</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>客户类型：</label>
+    <select th:field="*{type}">
+      <option value="">请选择</option>
+      <option value="企业客户">企业客户</option>
+      <option value="个人客户">个人客户</option>
+      <option value="政府客户">政府客户</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>联系人：</label>
+    <input type="text" th:field="*{contact}" required />
+  </div>
+  <div class="form-group">
+    <label>联系电话：</label>
+    <input type="tel" th:field="*{phone}" required />
+  </div>
+  <div class="form-group">
+    <label>客户地址：</label>
+    <textarea th:field="*{address}" rows="3"></textarea>
+  </div>
+
+  <div class="form-group">
+    <button type="submit">保存草稿</button>
+    <a th:href="|@{/customer/submit/{id}(id=${customer.id})}|" th:if="${customer.id != null}">提交申请</a>
+    <a th:href="|@{/customer/cancel/{id}(id=${customer.id})}|" th:if="${customer.id != null}">撤销申请</a>
+    <a href="/customer/list">返回列表</a>
+  </div>
+</form>
+</body>
+</html>

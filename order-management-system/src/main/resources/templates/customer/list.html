@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客户查询</title>
+    <style>
+        body { padding: 20px; font-family: "Microsoft YaHei"; }
+        .search { margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .search input, .search select { margin: 0 10px; padding: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f8f9fa; }
+        .action a { margin-right: 5px; text-decoration: none; color: #007bff; }
+        @media (max-width: 768px) {
+            table { font-size: 12px; }
+            th, td { padding: 5px; }
+            .search { display: flex; flex-direction: column; gap: 10px; }
+            .search input, .search select { width: 100%; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+<h2>客户查询/审批列表</h2>
+
+<!-- 查询表单 -->
+<div class="search">
+    <form th:action="@{/customer/list}" method="get">
+        关键词：<input type="text" name="keyword" th:value="${keyword}" placeholder="名称/联系人/电话..." />
+        行业：<select name="industry" th:value="${industry}">
+        <option value="">全部</option>
+        <option value="制造业">制造业</option>
+        <option value="服务业">服务业</option>
+        <option value="金融业">金融业</option>
+        <option value="零售业">零售业</option>
+    </select>
+        客户类型：<select name="type" th:value="${type}">
+        <option value="">全部</option>
+        <option value="企业客户">企业客户</option>
+        <option value="个人客户">个人客户</option>
+        <option value="政府客户">政府客户</option>
+    </select>
+        <button type="submit">查询</button>
+        <a href="/customer/apply">新增客户</a>
+    </form>
+</div>
+
+<!-- 客户列表 -->
+<table>
+    <tr>
+        <th>客户名称</th>
+        <th>客户简称</th>
+        <th>行业</th>
+        <th>客户类型</th>
+        <th>联系人</th>
+        <th>联系电话</th>
+        <th>状态</th>
+        <th>操作</th>
+    </tr>
+    <tr th:each="customer : ${customers}">
+        <td th:text="${customer.name}"></td>
+        <td th:text="${customer.shortName}"></td>
+        <td th:text="${customer.industry}"></td>
+        <td th:text="${customer.type}"></td>
+        <td th:text="${customer.contact}"></td>
+        <td th:text="${customer.phone}"></td>
+        <td th:text="${customer.status}"></td>
+        <td class="action">
+            <a th:href="|@{/customer/apply(id=${customer.id})}|">修改</a>
+            <a th:href="|@{/customer/delete/{id}(id=${customer.id})}|" onclick="return confirm('确定删除？')">删除</a>
+            <a th:href="|@{/customer/approve/{id}(id=${customer.id})}|" th:if="${customer.status == '已提交'}">审批</a>
+        </td>
+    </tr>
+</table>
+</body>
+</html>
