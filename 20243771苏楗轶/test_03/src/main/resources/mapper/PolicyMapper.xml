@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.PolicyMapper">
+
+    <resultMap id="PolicyResultMap" type="com.example.entity.Policy">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="type" column="type"/>
+        <result property="category" column="category"/>
+        <result property="range" column="range"/>
+        <result property="document" column="document"/>
+        <result property="form" column="form"/>
+        <result property="organ" column="organ"/>
+        <result property="viadata" column="viadata"/>
+        <result property="pubdata" column="pubdata"/>
+        <result property="perdata" column="perdata"/>
+        <result property="field" column="field"/>
+        <result property="theme" column="theme"/>
+        <result property="keyword" column="keyword"/>
+        <result property="superior" column="superior"/>
+        <result property="precursor" column="precursor"/>
+        <result property="succeed" column="succeed"/>
+        <result property="state" column="state"/>
+        <result property="text" column="text"/>
+        <result property="pdf" column="pdf"/>
+        <result property="redundancy" column="redundancy"/>
+        <result property="rank" column="rank"/>
+        <result property="policykey" column="policykey"/>
+        <result property="newrank" column="newrank"/>
+        <result property="year" column="year"/>
+        <result property="newkey" column="newkey"/>
+        <result property="secondtheme" column="secondtheme"/>
+        <result property="allsum" column="allsum"/>
+    </resultMap>
+
+    <!-- 查询政策列表 -->
+    <select id="selectPolicyList" resultMap="PolicyResultMap">
+        SELECT * FROM policy
+        <where>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="document != null and document != ''">
+                AND document LIKE CONCAT('%', #{document}, '%')
+            </if>
+            <if test="organ != null and organ != ''">
+                AND organ LIKE CONCAT('%', #{organ}, '%')
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (name LIKE CONCAT('%', #{keyword}, '%')
+                     OR text LIKE CONCAT('%', #{keyword}, '%')
+                     OR keyword LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="type != null and type != ''">
+                AND type = #{type}
+            </if>
+        </where>
+        ORDER BY pubdata DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!-- 查询政策总数 -->
+    <select id="countPolicyList" resultType="int">
+        SELECT COUNT(*) FROM policy
+        <where>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="document != null and document != ''">
+                AND document LIKE CONCAT('%', #{document}, '%')
+            </if>
+            <if test="organ != null and organ != ''">
+                AND organ LIKE CONCAT('%', #{organ}, '%')
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (name LIKE CONCAT('%', #{keyword}, '%')
+                     OR text LIKE CONCAT('%', #{keyword}, '%')
+                     OR keyword LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="type != null and type != ''">
+                AND type = #{type}
+            </if>
+        </where>
+    </select>
+
+    <!-- 根据ID查询政策详情 -->
+    <select id="selectPolicyById" resultMap="PolicyResultMap">
+        SELECT * FROM policy WHERE id = #{id}
+    </select>
+
+</mapper>

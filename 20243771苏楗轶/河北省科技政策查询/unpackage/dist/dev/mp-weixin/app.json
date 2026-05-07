@@ -1,0 +1,13 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/detail/detail"
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "科技政策查询系统",
+    "navigationBarBackgroundColor": "#1e3c72",
+    "backgroundColor": "#F8F8F8"
+  },
+  "usingComponents": {}
+}

@@ -1,0 +1,645 @@
+<template>
+	<view class="container">
+		<!-- 顶部LOGO区 -->
+		<view class="header">
+			<image class="logo" src="/static/logo.png"></image>
+			<text class="title">科技政策查询系统</text>
+		</view>
+
+		<!-- 多条件查询区 -->
+		<view class="search-area">
+			<view class="search-row">
+				<text class="label">政策名称：</text>
+				<input class="input" v-model="searchForm.name" placeholder="请输入政策名称" />
+				<text class="label">发文字号：</text>
+				<input class="input" v-model="searchForm.document" placeholder="请输入发文字号" />
+				<text class="label">制定机关：</text>
+				<input class="input" v-model="searchForm.organ" placeholder="请输入制定机关" />
+				<text class="label">全文检索：</text>
+				<input class="input" v-model="searchForm.keyword" placeholder="请输入关键词" />
+				<button class="btn btn-primary" @click="handleSearch">查询</button>
+			</view>
+			<view class="search-buttons">
+				<button class="btn btn-default" @click="handleReset">重置</button>
+			</view>
+		</view>
+
+		<!-- 主内容区 -->
+		<view class="main-content">
+			<!-- 左侧政策分类树 -->
+			<view class="left-tree">
+				<view class="tree-header">
+					<text class="tree-title">政策分类</text>
+				</view>
+				<scroll-view class="tree-scroll" scroll-y>
+					<view class="tree-item" 
+					      v-for="item in policyKinds" 
+					      :key="item.type"
+					      :class="{active: selectedType === item.type}"
+					      @click="selectPolicyKind(item.type)">
+						<text class="tree-text">{{item.type}} ({{item.policyCount || 0}})</text>
+					</view>
+				</scroll-view>
+			</view>
+
+			<!-- 右侧政策列表 -->
+			<view class="right-list">
+				<view class="list-header">
+					<text class="header-item name">政策名称</text>
+					<text class="header-item org">发文机构</text>
+					<text class="header-item date">颁布日期</text>
+					<text class="header-item kind">政策分类</text>
+					<text class="header-item action">操作</text>
+				</view>
+				<scroll-view class="list-scroll" scroll-y>
+					<view class="list-item" v-for="policy in policyList" :key="policy.id">
+						<text class="list-item-content name">{{policy.name}}</text>
+						<text class="list-item-content org">{{policy.organ}}</text>
+						<text class="list-item-content date">{{formatDate(policy.pubdata)}}</text>
+						<text class="list-item-content kind">{{policy.type}}</text>
+						<view class="list-item-content action">
+							<button class="btn-view" @click="viewDetail(policy.id)">详情</button>
+						</view>
+					</view>
+				</scroll-view>
+
+				<!-- 分页 -->
+				<view class="pagination">
+					<text class="page-info">共 {{total}} 条</text>
+					<view class="page-controls">
+						<button class="page-btn" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</button>
+						<text class="page-num">{{currentPage}}</text>
+						<button class="page-btn" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</button>
+						<text class="page-size">每页 10 条</text>
+					</view>
+				</view>
+			</view>
+		</view>
+
+		<!-- 底部版权区 -->
+		<view class="footer">
+			<text class="footer-text">Copyright 2021-2022 All Rights Reserved 版权所有：河北省科学技术情报研究院 河北省科技创新战略研究院 技术支持：河北省科技信息处理实验室</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { ref, onMounted } from 'vue'
+
+// 更新API地址，确保与后端服务匹配
+// 在手机端需要使用电脑的局域网IP地址
+const API_BASE = 'http://10.39.60.209:8080/api'
+
+const searchForm = ref({
+	name: '',
+	document: '',
+	organ: '',
+	keyword: ''
+})
+
+const policyKinds = ref<any[]>([])
+const policyList = ref<any[]>([])
+const selectedType = ref('')
+
+// 添加通用请求函数，包含错误处理
+const requestApi = (options: any) => {
+	return new Promise((resolve, reject) => {
+		const url = `${API_BASE}${options.path}`
+		console.log(`发起API请求: ${url}`)
+		
+		uni.request({
+			...options,
+			url: url,
+			method: options.method || 'GET',
+			header: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json'
+			},
+			timeout: 10000,
+			success: (res: any) => {
+				console.log(`API请求成功: ${url}`, res)
+				if (res.statusCode === 200) {
+					resolve(res.data)
+				} else {
+					console.error(`API请求失败(${res.statusCode}): ${url}`, res)
+					uni.showToast({
+						title: `请求失败: ${res.statusCode}`,
+						icon: 'none'
+					})
+					reject(res)
+				}
+			},
+			fail: (err: any) => {
+				console.error(`API请求异常: ${url}`, err)
+				uni.showToast({
+					title: `请求失败: ${err.errMsg ? err.errMsg : '网络错误'}`,
+					icon: 'none'
+				})
+				reject(err)
+			}
+		})
+	})
+}
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+const totalPages = ref(0)
+
+onMounted(() => {
+	loadPolicyKinds()
+	loadPolicyList()
+})
+
+const loadPolicyKinds = async () => {
+	try {
+		console.log('开始加载政策分类...')
+		const res: any = await requestApi({ path: '/policyKinds' })
+		
+		console.log('政策分类API响应:', res)
+		
+		if (res && res.code === 200) {
+			policyKinds.value = res.data || []
+			console.log('政策分类数据:', policyKinds.value)
+			console.log('分类数量:', policyKinds.value.length)
+			
+			// 如果分类为空，显示提示
+			if (policyKinds.value === null || policyKinds.value === undefined || policyKinds.value.length === 0) {
+				console.warn('警告：政策分类列表为空，请检查后端数据')
+				uni.showToast({
+					title: '暂无政策分类数据',
+					icon: 'none'
+				})
+			}
+		} else {
+			console.error('获取政策分类失败:', res)
+			uni.showToast({
+				title: res && res.message ? res.message : '获取分类失败',
+				icon: 'none'
+			})
+		}
+	} catch (error) {
+		console.error('加载政策分类时发生错误:', error)
+		uni.showToast({
+			title: '加载政策分类失败',
+			icon: 'none'
+		})
+	}
+}
+
+const loadPolicyList = async () => {
+	try {
+		const params: any = {
+			pageNum: currentPage.value,
+			pageSize: pageSize.value
+		}
+		
+		if (searchForm.value.name !== null && searchForm.value.name !== undefined && searchForm.value.name !== '') params.name = searchForm.value.name
+		if (searchForm.value.document !== null && searchForm.value.document !== undefined && searchForm.value.document !== '') params.document = searchForm.value.document
+		if (searchForm.value.organ !== null && searchForm.value.organ !== undefined && searchForm.value.organ !== '') params.organ = searchForm.value.organ
+		if (searchForm.value.keyword !== null && searchForm.value.keyword !== undefined && searchForm.value.keyword !== '') params.keyword = searchForm.value.keyword
+		if (selectedType.value !== null && selectedType.value !== undefined && selectedType.value !== '') params.type = selectedType.value
+		
+		console.log('请求政策列表，参数:', params)
+		// 构建查询字符串
+		let queryString = ''
+		Object.keys(params).forEach((key, index) => {
+			if (params[key] !== null && params[key] !== undefined && params[key] !== '') {
+				queryString += (index === 0 ? '?' : '&') + `${key}=${encodeURIComponent(params[key])}`
+			}
+		})
+		
+		console.log('请求路径:', `/policies${queryString}`)
+		const res: any = await requestApi({ 
+			path: `/policies${queryString}`
+		})
+		
+		console.log('政策列表API响应:', res)
+		
+		if (res && res.code === 200) {
+			policyList.value = res.data && res.data.list ? res.data.list : []
+			total.value = res.data && res.data.total ? res.data.total : 0
+			totalPages.value = res.data && res.data.totalPages ? res.data.totalPages : 0
+			
+			console.log(`加载到政策列表: ${policyList.value.length} 条, 总计: ${total.value} 条`)
+			
+			// 如果列表为空，显示提示
+			if (policyList.value === null || policyList.value === undefined || policyList.value.length === 0) {
+				console.info('提示：当前查询条件下没有找到政策数据')
+				// 不显示提示，避免频繁弹窗
+			}
+		} else {
+			console.error('获取政策列表失败:', res)
+			uni.showToast({
+				title: res && res.message ? res.message : '获取政策列表失败',
+				icon: 'none'
+			})
+		}
+	} catch (error) {
+		console.error('加载政策列表时发生错误:', error)
+		uni.showToast({
+			title: '加载政策列表失败',
+			icon: 'none'
+		})
+	}
+}
+
+const handleSearch = () => {
+	currentPage.value = 1
+	loadPolicyList()
+}
+
+const handleReset = () => {
+	searchForm.value = {
+		name: '',
+		document: '',
+		organ: '',
+		keyword: ''
+	}
+	selectedType.value = ''
+	currentPage.value = 1
+	loadPolicyList()
+}
+
+const selectPolicyKind = (type: string) => {
+	if (selectedType.value === type) {
+		selectedType.value = ''
+	} else {
+		selectedType.value = type
+	}
+	currentPage.value = 1
+	loadPolicyList()
+}
+
+const viewDetail = (id: string) => {
+	uni.navigateTo({
+		url: `/pages/detail/detail?id=${id}`
+	})
+}
+
+const goPage = (page: number) => {
+	if (page >= 1 && page <= totalPages.value) {
+		currentPage.value = page
+		loadPolicyList()
+	}
+}
+
+const formatDate = (date: any) => {
+	if (date === null || date === undefined || date === '') return ''
+	const d = new Date(date)
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+</script>
+
+<style>
+.container {
+	min-height: 100vh;
+	background-color: #f5f5f5;
+	display: flex;
+	flex-direction: column;
+	font-family: Arial, sans-serif;
+}
+
+.header {
+	background-color: #1e3c72;
+	padding: 15px 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.logo {
+	width: 50px;
+	height: 50px;
+	margin-right: 15px;
+}
+
+.title {
+	font-size: 24px;
+	color: #ffffff;
+	font-weight: bold;
+}
+
+.search-area {
+	background-color: #ffffff;
+	padding: 15px;
+	margin: 10px;
+	border: 1px solid #ddd;
+}
+
+.search-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.label {
+	font-size: 14px;
+	color: #333;
+	white-space: nowrap;
+}
+
+.input {
+	height: 32px;
+	padding: 0 10px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	font-size: 14px;
+	min-width: 150px;
+}
+
+.search-buttons {
+	display: flex;
+	justify-content: flex-start;
+	margin-top: 10px;
+}
+
+.btn {
+	padding: 6px 20px;
+	border-radius: 4px;
+	font-size: 14px;
+	border: none;
+	cursor: pointer;
+}
+
+.btn-primary {
+	background-color: #1e3c72;
+	color: #ffffff;
+}
+
+.btn-default {
+	background-color: #ffffff;
+	color: #333;
+	border: 1px solid #ddd;
+}
+
+.main-content {
+	flex: 1;
+	display: flex;
+	margin: 0 10px 10px 10px;
+	gap: 10px;
+	min-height: 500px;
+	align-items: flex-start;
+}
+
+.left-tree {
+	width: 220px;
+	background-color: #ffffff;
+	border: 1px solid #ddd;
+	display: flex;
+	flex-direction: column;
+}
+
+.tree-header {
+	background-color: #f0f4f8;
+	padding: 10px;
+	border-bottom: 1px solid #ddd;
+}
+
+.tree-title {
+	font-size: 16px;
+	font-weight: bold;
+	color: #333;
+	display: block;
+}
+
+.tree-scroll {
+	flex: 1;
+	overflow-y: auto;
+}
+
+.tree-item {
+	padding: 8px 12px;
+	cursor: pointer;
+	transition: all 0.2s;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tree-item:hover {
+	background-color: #e8f0fe;
+}
+
+.tree-item.active {
+	background-color: #1e3c72;
+	color: #ffffff;
+}
+
+.tree-text {
+	font-size: 14px;
+	color: #333;
+}
+
+.tree-item.active .tree-text {
+	color: #ffffff;
+}
+
+.right-list {
+	flex: 1;
+	background-color: #ffffff;
+	border: 1px solid #ddd;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.list-header {
+	display: flex;
+	background-color: #f0f4f8;
+	padding: 8px 10px;
+	border-bottom: 1px solid #ddd;
+	font-weight: bold;
+	color: #333;
+	font-size: 14px;
+}
+
+.header-item {
+	font-size: 14px;
+	word-break: keep-all;
+}
+
+.header-item.name {
+	flex: 2;
+	text-align: left;
+	padding-left: 10px;
+}
+
+.header-item.org {
+	flex: 1.5;
+	text-align: left;
+	padding-left: 10px;
+}
+
+.header-item.date {
+	flex: 1;
+	text-align: center;
+}
+
+.header-item.kind {
+	flex: 1;
+	text-align: center;
+}
+
+.header-item.action {
+	flex: 0.8;
+	text-align: center;
+}
+
+.list-scroll {
+	flex: 1;
+	overflow-y: auto;
+}
+
+.list-item {
+	display: flex;
+	padding: 10px;
+	border-bottom: 1px solid #eee;
+	align-items: center;
+	flex-wrap: nowrap;
+}
+
+.list-item:hover {
+	background-color: #f9f9f9;
+}
+
+.list-item-content {
+	font-size: 13px;
+	color: #333;
+	word-break: break-word;
+	padding: 0 5px;
+}
+
+.list-item-content.name {
+	flex: 2;
+	text-align: left;
+}
+
+.list-item-content.org {
+	flex: 1.5;
+	text-align: left;
+}
+
+.list-item-content.date {
+	flex: 1;
+	text-align: center;
+}
+
+.list-item-content.kind {
+	flex: 1;
+	text-align: center;
+}
+
+.list-item-content.action {
+	flex: 0.8;
+	text-align: center;
+}
+
+.btn-view {
+	background-color: #1e3c72;
+	color: #ffffff;
+	border: none;
+	padding: 4px 12px;
+	border-radius: 4px;
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.pagination {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 10px;
+	padding: 10px;
+	border-top: 1px solid #eee;
+}
+
+.page-info {
+	font-size: 13px;
+	color: #666;
+}
+
+.page-controls {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.page-btn {
+	padding: 4px 12px;
+	background-color: #1e3c72;
+	color: #ffffff;
+	border: none;
+	border-radius: 4px;
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.page-btn:disabled {
+	background-color: #ccc;
+	cursor: not-allowed;
+}
+
+.page-num {
+	font-size: 13px;
+	color: #333;
+	min-width: 30px;
+	text-align: center;
+}
+
+.page-size {
+	font-size: 13px;
+	color: #666;
+}
+
+.footer {
+	background-color: #1e3c72;
+	padding: 15px;
+	text-align: center;
+	margin-top: auto;
+}
+
+.footer-text {
+	color: #ffffff;
+	font-size: 12px;
+}
+
+/* 响应式布局 */
+@media screen and (max-width: 768px) {
+	.search-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+	
+	.search-row .input {
+		width: 100%;
+		min-width: unset;
+	}
+	
+	.main-content {
+		flex-direction: column;
+	}
+	
+	.left-tree {
+		width: 100%;
+		max-height: 200px;
+	}
+	
+	.tree-scroll {
+		height: 150px;
+	}
+	
+	.list-header {
+		font-size: 12px;
+	}
+	
+	.header-item {
+		font-size: 12px;
+	}
+	
+	.list-item-content {
+		font-size: 12px;
+	}
+}
+</style>

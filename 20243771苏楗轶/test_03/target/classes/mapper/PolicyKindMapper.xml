@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.PolicyKindMapper">
+
+    <resultMap id="PolicyKindResultMap" type="com.example.entity.PolicyKind">
+        <result property="type" column="type"/>
+        <result property="policyCount" column="policy_count"/>
+    </resultMap>
+
+    <!-- 查询所有政策分类及政策数量 -->
+    <select id="selectAllPolicyKinds" resultMap="PolicyKindResultMap">
+        SELECT 
+            type,
+            COUNT(id) as policy_count
+        FROM policy
+        WHERE type IS NOT NULL AND type != ''
+        GROUP BY type
+        ORDER BY type
+    </select>
+
+    <!-- 根据分类名称查询分类信息 -->
+    <select id="selectPolicyKindById" resultMap="PolicyKindResultMap">
+        SELECT 
+            type,
+            COUNT(id) as policy_count
+        FROM policy
+        WHERE type = #{type}
+        GROUP BY type
+    </select>
+
+</mapper>

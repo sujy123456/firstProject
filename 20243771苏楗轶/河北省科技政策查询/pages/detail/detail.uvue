@@ -1,0 +1,241 @@
+<template>
+	<view class="container">
+		<!-- 顶部标题 -->
+		<view class="header">
+			<text class="title">政策详细信息</text>
+		</view>
+
+		<!-- 政策内容区 -->
+		<view class="content" v-if="policy">
+			<view class="info-section">
+				<view class="info-row">
+					<text class="info-label">政策名称：</text>
+					<text class="info-value">{{policy.name}}</text>
+				</view>
+				<view class="info-row">
+					<text class="info-label">发文字号：</text>
+					<text class="info-value">{{policy.document || '无'}}</text>
+				</view>
+				<view class="info-row">
+					<text class="info-label">制定机关：</text>
+					<text class="info-value">{{policy.organ}}</text>
+				</view>
+				<view class="info-row">
+					<text class="info-label">颁布日期：</text>
+					<text class="info-value">{{formatDate(policy.pubdata)}}</text>
+				</view>
+				<view class="info-row">
+					<text class="info-label">施行日期：</text>
+					<text class="info-value">{{formatDate(policy.perdata)}}</text>
+				</view>
+				<view class="info-row">
+					<text class="info-label">政策分类：</text>
+					<text class="info-value">{{policy.type}}</text>
+				</view>
+				<view class="info-row">
+					<text class="info-label">施行范围：</text>
+					<text class="info-value">{{policy.range || '无'}}</text>
+				</view>
+				<view class="info-row">
+					<text class="info-label">时效状态：</text>
+					<text class="info-value" :class="policy.state === '有效' ? 'valid' : 'invalid'">
+						{{policy.state || '无'}}
+					</text>
+				</view>
+				<view class="info-row">
+					<text class="info-label">关键词：</text>
+					<text class="info-value">{{policy.keyword || '无'}}</text>
+				</view>
+			</view>
+
+			<view class="content-section">
+				<text class="section-title">政策正文</text>
+				<scroll-view class="content-scroll" scroll-y>
+					<text class="content-text">{{policy.text}}</text>
+				</scroll-view>
+			</view>
+		</view>
+
+		<!-- 返回按钮 -->
+		<view class="footer">
+			<button class="btn-back" @click="goBack">返回列表</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+import { ref, onMounted } from 'vue'
+
+// 在手机端需要使用电脑的局域网IP地址
+const API_BASE = 'http://10.39.60.209:8080/api'
+const policy = ref<any>(null)
+const policyId = ref('')
+
+// 先定义函数，再使用
+const loadPolicyDetail = () => {
+	const url = `${API_BASE}/policy/${policyId.value}`
+	console.log(`发起API请求: ${url}`)
+	
+	uni.request({
+		url: url,
+		method: 'GET',
+		header: {
+			'Content-Type': 'application/json',
+			'Accept': 'application/json'
+		},
+		timeout: 10000,
+		success: (res: any) => {
+			console.log(`API请求成功: ${url}`, res)
+			if (res.statusCode === 200) {
+				if (res.data && res.data.code === 200) {
+					policy.value = res.data.data
+				} else {
+					uni.showToast({
+						title: '政策不存在',
+						icon: 'none'
+					})
+				}
+			} else {
+				console.error(`API请求失败(${res.statusCode}): ${url}`, res)
+				uni.showToast({
+					title: `请求失败: ${res.statusCode}`,
+					icon: 'none'
+				})
+			}
+		},
+		fail: (err: any) => {
+			console.error(`API请求异常: ${url}`, err)
+			uni.showToast({
+				title: `请求失败: ${err.errMsg ? err.errMsg : '网络错误'}`,
+				icon: 'none'
+			})
+		}
+	})
+}
+
+const formatDate = (date: any) => {
+	if (date === null || date === undefined || date === '') return ''
+	const d = new Date(date)
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const goBack = () => {
+	uni.navigateBack()
+}
+
+onMounted(() => {
+	// 获取页面参数
+	const pages = getCurrentPages()
+	const currentPage = pages[pages.length - 1]
+	policyId.value = currentPage?.options?.id ?? ''
+	
+	// 使用明确的布尔判断
+	if (policyId.value !== null && policyId.value !== undefined && policyId.value !== '') {
+		loadPolicyDetail()
+	}
+})
+</script>
+
+<style>
+.container {
+	min-height: 100vh;
+	background-color: #f5f5f5;
+}
+
+.header {
+	background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+	padding: 30px 20px;
+	text-align: center;
+}
+
+.title {
+	font-size: 28px;
+	color: #ffffff;
+	font-weight: bold;
+}
+
+.content {
+	padding: 20px;
+}
+
+.info-section {
+	background-color: #ffffff;
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 20px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.info-row {
+	display: flex;
+	padding: 12px 0;
+	border-bottom: 1px solid #eee;
+}
+
+.info-row:last-child {
+	border-bottom: none;
+}
+
+.info-label {
+	width: 120px;
+	font-size: 15px;
+	color: #666;
+	font-weight: bold;
+}
+
+.info-value {
+	flex: 1;
+	font-size: 15px;
+	color: #333;
+}
+
+.valid {
+	color: #52c41a;
+	font-weight: bold;
+}
+
+.invalid {
+	color: #ff4d4f;
+	font-weight: bold;
+}
+
+.content-section {
+	background-color: #ffffff;
+	border-radius: 8px;
+	padding: 20px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+	font-size: 18px;
+	font-weight: bold;
+	color: #333;
+	margin-bottom: 15px;
+	display: block;
+}
+
+.content-scroll {
+	max-height: 500px;
+}
+
+.content-text {
+	font-size: 15px;
+	color: #333;
+	line-height: 1.8;
+	white-space: pre-wrap;
+}
+
+.footer {
+	padding: 20px;
+	text-align: center;
+}
+
+.btn-back {
+	background-color: #2a5298;
+	color: #ffffff;
+	border: none;
+	border-radius: 4px;
+	padding: 12px 60px;
+	font-size: 16px;
+}
+</style>
